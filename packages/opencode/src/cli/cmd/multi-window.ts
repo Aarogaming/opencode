@@ -73,6 +73,23 @@ export const MultiWindowCommand = cmd({
         type: "boolean",
         default: false,
       })
+      .option("run-contracts", {
+        describe: "run per-window contract_path via tools/opencode_adapter",
+        type: "boolean",
+        default: false,
+      })
+      .option("contract-agent-chain", {
+        describe: "comma-separated agent chain for opencode_adapter (e.g. 'autopilot')",
+        type: "string",
+      })
+      .option("adapter-python", {
+        describe: "python executable for opencode_adapter (default: current python)",
+        type: "string",
+      })
+      .option("adapter-path", {
+        describe: "path to tools/opencode_adapter/opencode_adapter.py",
+        type: "string",
+      })
   },
   handler: async (args) => {
     const cwd = process.cwd()
@@ -104,6 +121,10 @@ export const MultiWindowCommand = cmd({
     if (args.extensions) cmdArgs.push("--extensions", String(args.extensions))
     if (args.log) cmdArgs.push("--log", String(args.log))
     if (args["dry-run"]) cmdArgs.push("--dry-run")
+    if (args["run-contracts"]) cmdArgs.push("--run-contracts")
+    if (args["contract-agent-chain"]) cmdArgs.push("--contract-agent-chain", String(args["contract-agent-chain"]))
+    if (args["adapter-python"]) cmdArgs.push("--adapter-python", String(args["adapter-python"]))
+    if (args["adapter-path"]) cmdArgs.push("--adapter-path", String(args["adapter-path"]))
 
     UI.println("Running multi-window runner:")
     UI.println(`  ${python} ${cmdArgs.map((x) => JSON.stringify(x)).join(" ")}`)
