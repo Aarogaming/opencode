@@ -1,11 +1,14 @@
+import process from "node:process"
+import { Buffer } from "node:buffer"
 import type { Argv } from "yargs"
 import path from "path"
+import * as prompts from "@clack/prompts"
 import { pathToFileURL } from "url"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { Flag } from "../../flag/flag"
 import { bootstrap } from "../bootstrap"
-import { EOL } from "os"
+import { EOL } from "node:os"
 import { Filesystem } from "../../util/filesystem"
 import { createOpencodeClient, type Message, type OpencodeClient, type ToolPart } from "@opencode-ai/sdk/v2"
 import { Server } from "../../server/server"
@@ -302,6 +305,21 @@ export const RunCommand = cmd({
         describe: "show thinking blocks",
         default: false,
       })
+      .option("yolo", {
+        type: "boolean",
+        describe: "YOLO mode: auto-accept all permissions (GeminiCLI style)",
+        default: false,
+      })
+      .option("copilot-auto", {
+        type: "boolean",
+        describe: "enable Auto mode for github copilot model choosing (10% discount)",
+        default: false,
+      })
+      .option("always-on", {
+        type: "boolean",
+        describe: "enable Always On Agent Mode (idling instead of terminating)",
+        default: false,
+      })
   },
   handler: async (args) => {
     let message = [...args.message, ...(args["--"] || [])]
@@ -538,12 +556,49 @@ export const RunCommand = cmd({
             event.properties.sessionID === sessionID &&
             event.properties.status.type === "idle"
           ) {
+            if (args["always-on"]) {
+              UI.empty()
+              const nextMessage = await prompts.text({
+                message: "Add more instructions (or Ctrl+C to exit)",
+                placeholder: "Keep going...",
+              })
+
+              if (prompts.isCancel(nextMessage)) {
+                break
+              }
+
+              if (nextMessage.trim()) {
+                toggles.delete("start")
+                await sdk.session.prompt({
+                  sessionID,
+                  agent,
+                  model: args["copilot-auto"] ? "github-copilot/auto" : args.model,
+                  variant: args.variant,
+                  parts: [{ type: "text", text: nextMessage }],
+                })
+                continue
+              }
+            }
             break
           }
 
           if (event.type === "permission.asked") {
             const permission = event.properties
             if (permission.sessionID !== sessionID) continue
+
+            if (args.yolo) {
+              UI.println(
+                UI.Style.TEXT_SUCCESS_BOLD + "!",
+                UI.Style.TEXT_NORMAL +
+                  `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-accepting (YOLO)`,
+              )
+              await sdk.permission.reply({
+                requestID: permission.id,
+                reply: "accept",
+              })
+              continue
+            }
+
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
               UI.Style.TEXT_NORMAL +
@@ -559,7 +614,11 @@ export const RunCommand = cmd({
 
       // Validate agent if specified
       const agent = await (async () => {
-        if (!args.agent) return undefined
+        let agentName = args.agent
+        if (!agentName && args["always-on"]) {
+          agentName = "beast"
+        }
+        if (!agentName) return undefined
 
         // When attaching, validate against the running server instead of local Instance state.
         if (args.attach) {
@@ -577,12 +636,12 @@ export const RunCommand = cmd({
             return undefined
           }
 
-          const agent = modes.find((a) => a.name === args.agent)
+          const agent = modes.find((a) => a.name === agentName)
           if (!agent) {
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
               UI.Style.TEXT_NORMAL,
-              `agent "${args.agent}" not found. Falling back to default agent`,
+              `agent "${agentName}" not found. Falling back to default agent`,
             )
             return undefined
           }
@@ -591,20 +650,20 @@ export const RunCommand = cmd({
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
               UI.Style.TEXT_NORMAL,
-              `agent "${args.agent}" is a subagent, not a primary agent. Falling back to default agent`,
+              `agent "${agentName}" is a subagent, not a primary agent. Falling back to default agent`,
             )
             return undefined
           }
 
-          return args.agent
+          return agentName
         }
 
-        const entry = await Agent.get(args.agent)
+        const entry = await Agent.get(agentName)
         if (!entry) {
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${args.agent}" not found. Falling back to default agent`,
+            `agent "${agentName}" not found. Falling back to default agent`,
           )
           return undefined
         }
@@ -612,11 +671,11 @@ export const RunCommand = cmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${args.agent}" is a subagent, not a primary agent. Falling back to default agent`,
+            `agent "${agentName}" is a subagent, not a primary agent. Falling back to default agent`,
           )
           return undefined
         }
-        return args.agent
+        return agentName
       })()
 
       const sessionID = await session(sdk)
@@ -635,13 +694,17 @@ export const RunCommand = cmd({
         await sdk.session.command({
           sessionID,
           agent,
-          model: args.model,
+          model: args["copilot-auto"] ? "github-copilot/auto" : args.model,
           command: args.command,
           arguments: message,
           variant: args.variant,
         })
       } else {
-        const model = args.model ? Provider.parseModel(args.model) : undefined
+        const model = args["copilot-auto"]
+          ? Provider.parseModel("github-copilot/auto")
+          : args.model
+            ? Provider.parseModel(args.model)
+            : undefined
         await sdk.session.prompt({
           sessionID,
           agent,

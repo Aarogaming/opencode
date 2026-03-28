@@ -586,7 +586,8 @@ export namespace SessionPrompt {
         })
         throw error
       }
-      const maxSteps = agent.steps ?? Infinity
+      const isContinuous = agent.mode === "continuous"
+      const maxSteps = isContinuous ? 10_000 : (agent.steps ?? Infinity)
       const isLastStep = step >= maxSteps
       msgs = await insertReminders({
         messages: msgs,
@@ -688,6 +689,12 @@ export namespace SessionPrompt {
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
+      }
+
+      if (isContinuous) {
+        system.push(
+          "You are running in 'Always On' Agent Mode. Do not end the session or say goodbye. If you have completed the assigned task, stay active, monitor the workspace, and wait for further instructions or look for ways to improve the project autonomously.",
+        )
       }
 
       const result = await processor.process({

@@ -13,6 +13,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+import PROMPT_BEAST from "./prompt/beast.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
@@ -28,7 +29,7 @@ export namespace Agent {
     .object({
       name: z.string(),
       description: z.string().optional(),
-      mode: z.enum(["subagent", "primary", "all"]),
+      mode: z.enum(["subagent", "primary", "all", "continuous"]),
       native: z.boolean().optional(),
       hidden: z.boolean().optional(),
       topP: z.number().optional(),
@@ -104,6 +105,22 @@ export namespace Agent {
           const user = Permission.fromConfig(cfg.permission ?? {})
 
           const agents: Record<string, Info> = {
+            beast: {
+              name: "beast",
+              description: "Continuous agent mode. Stays active and autonomous (Always On).",
+              options: {},
+              permission: Permission.merge(
+                defaults,
+                Permission.fromConfig({
+                  question: "allow",
+                  plan_enter: "allow",
+                }),
+                user,
+              ),
+              mode: "continuous",
+              native: true,
+              prompt: PROMPT_BEAST,
+            },
             build: {
               name: "build",
               description: "The default agent. Executes tools based on configured permissions.",
