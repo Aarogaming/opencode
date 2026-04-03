@@ -1,0 +1,21 @@
+{
+  "name": "@aaroneous/aas-core-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/server.ts",
+  "exports": {
+    ".": "./src/server.ts",
+    "./server": "./src/server.ts"
+  },
+  "oc-plugin": [
+    "server"
+  ],
+  "engines": {
+    "opencode": "^1.3.0"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.3.4",
+    "zod": "^4.1.8"
+  }
+}
