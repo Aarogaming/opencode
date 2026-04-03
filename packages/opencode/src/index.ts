@@ -35,6 +35,7 @@ import { JsonMigration } from "./storage/json-migration"
 import { Database } from "./storage/db"
 import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
+import { AASCommand } from "./cli/cmd/aas"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -154,6 +155,7 @@ const cli = yargs(hideBin(process.argv))
   .command(PrCommand)
   .command(SessionCommand)
   .command(PluginCommand)
+  .command(AASCommand)
   .command(DbCommand)
   .fail((msg, err) => {
     if (

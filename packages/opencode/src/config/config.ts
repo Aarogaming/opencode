@@ -898,6 +898,33 @@ export namespace Config {
     })
   export type Provider = z.infer<typeof Provider>
 
+  export const AAS = z
+    .object({
+      enabled: z.boolean().optional().describe("Enable AAS fascia integration"),
+      mode: z.enum(["offline", "hybrid", "live"]).optional().describe("AAS execution mode: offline, hybrid, or live"),
+      bridge: z
+        .object({
+          url: z.string().min(1).optional().describe("AAS bridge endpoint URL"),
+        })
+        .strict()
+        .optional(),
+      auth: z
+        .object({
+          token: z.string().min(1).optional().describe("AAS bearer or bridge auth token"),
+          header: z.string().min(1).optional().describe("Header key for AAS auth token"),
+          hmac: z.string().min(1).optional().describe("Shared key for AAS HMAC request signing"),
+          api_token: z.string().min(1).optional().describe("AAS API auth token for middleware-gated routes"),
+          api_header: z.string().min(1).optional().describe("Header key for AAS API auth token"),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict()
+    .meta({
+      ref: "AASConfig",
+    })
+  export type AAS = z.infer<typeof AAS>
+
   export const Info = z
     .object({
       $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
@@ -1089,6 +1116,7 @@ export namespace Config {
             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
         })
         .optional(),
+      aas: AAS.optional().describe("AAS fascia bridge configuration"),
     })
     .strict()
     .meta({
