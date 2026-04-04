@@ -108,7 +108,7 @@ In OpenCode session prompts, ask to run:
 
 ## Expected bridge behavior
 
-- Accept POST body with `protocol_version`, ids, `capability`, `mode`, and `payload`.
+- Accept POST body with `command`, ids, `capability`, `args`, `mode`, and `protocol_version`.
 - Return JSON with:
   - `ok: true` and `data`
   - or `ok: false` and `error`

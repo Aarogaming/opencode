@@ -35,8 +35,6 @@ describe("aas.profile", () => {
       aas: {
         enabled: true,
         mode: "live",
-        bridge: undefined,
-        auth: undefined,
       },
     })
   })

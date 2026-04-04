@@ -114,9 +114,17 @@ export namespace AASDoctor {
 
     if (body && typeof body === "object" && "protocol" in body) {
       const protocol = (body as Record<string, unknown>).protocol
-      if (typeof protocol === "string" && protocol.includes("aas.opencode.bridge.v1")) {
-        list.push({ key: "aas.protocol", level: "ok", msg: `Protocol ${protocol} is compatible` })
+      if (typeof protocol !== "string") {
+        list.push({ key: "aas.protocol.handshake", level: "fail", msg: "Bridge protocol identifier is malformed" })
+        return { ok: false, list }
       }
+
+      if (!protocol.includes("aas.opencode.bridge.v1")) {
+        list.push({ key: "aas.protocol.handshake", level: "fail", msg: `Unsupported protocol identifier ${protocol}` })
+        return { ok: false, list }
+      }
+
+      list.push({ key: "aas.protocol.handshake", level: "ok", msg: `Protocol ${protocol} is compatible` })
       if ("auth" in body) {
         const auth = (body as Record<string, unknown>).auth
         if (
@@ -150,16 +158,16 @@ export namespace AASDoctor {
 
     const version = parseVersion(body)
     if (!version) {
-      list.push({ key: "aas.protocol", level: "warn", msg: "Bridge protocol version not reported" })
+      list.push({ key: "aas.protocol.version", level: "warn", msg: "Bridge protocol version not reported" })
       return { ok: list.every((x) => x.level !== "fail"), list }
     }
 
     if (!AASInterop.compat(version)) {
-      list.push({ key: "aas.protocol", level: "fail", msg: `Incompatible protocol version ${version}` })
+      list.push({ key: "aas.protocol.version", level: "fail", msg: `Incompatible protocol version ${version}` })
       return { ok: false, list }
     }
 
-    list.push({ key: "aas.protocol", level: "ok", msg: `Protocol version ${version} is compatible` })
+    list.push({ key: "aas.protocol.version", level: "ok", msg: `Protocol version ${version} is compatible` })
     return { ok: list.every((x) => x.level !== "fail"), list }
   }
 }

@@ -59,17 +59,25 @@ export namespace AASProfile {
     api_token?: string
     api_header?: string
   }) {
+    const hasBridge = input.bridge !== undefined
+    const hasAuth =
+      input.token !== undefined ||
+      input.header !== undefined ||
+      input.hmac !== undefined ||
+      input.api_token !== undefined ||
+      input.api_header !== undefined
     const item = {
       ...auth(input),
       ...api(input),
     }
+    const aas: NonNullable<Partial<Config.Info>["aas"]> = {
+      enabled: true,
+      mode: input.mode,
+    }
+    if (hasBridge) aas.bridge = bridge(input.bridge)
+    if (hasAuth) aas.auth = Object.keys(item).length ? item : undefined
     return {
-      aas: {
-        enabled: true,
-        mode: input.mode,
-        bridge: bridge(input.bridge),
-        auth: Object.keys(item).length ? item : undefined,
-      },
+      aas,
     } satisfies Partial<Config.Info>
   }
 

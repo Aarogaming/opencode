@@ -12,6 +12,16 @@ export const Envelope = z.object({
   created_at_utc: z.string().min(1),
 })
 
+export const Invoke = z.object({
+  command: z.literal("capability.invoke"),
+  request_id: z.string().min(1),
+  operation_id: z.string().min(1),
+  capability: z.string().min(1),
+  args: z.record(z.string(), z.unknown()),
+  mode: Mode,
+  protocol_version: z.string().regex(/^1\.[0-9]+$/),
+})
+
 export const Failure = z.object({
   code: z.enum([
     "bad_request",
@@ -57,10 +67,15 @@ export const Result = z
   })
 
 export type Envelope = z.infer<typeof Envelope>
+export type Invoke = z.infer<typeof Invoke>
 export type Result = z.infer<typeof Result>
 
 export function parseResult(input: unknown) {
   return Result.safeParse(input)
+}
+
+export function parseInvoke(input: unknown) {
+  return Invoke.parse(input)
 }
 
 export function compatible(version: string, expected = 1) {

@@ -19,7 +19,7 @@ describe("aas.doctor.extra", () => {
     })
 
     expect(out.ok).toBe(true)
-    expect(out.list.some((x) => x.key === "aas.protocol" && x.level === "warn")).toBe(true)
+    expect(out.list.some((x) => x.key === "aas.protocol.version" && x.level === "warn")).toBe(true)
   })
 
   test("fails invalid bridge url", async () => {

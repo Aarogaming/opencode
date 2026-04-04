@@ -46,7 +46,7 @@ describe("aas.doctor", () => {
     })
 
     expect(out.ok).toBe(true)
-    expect(out.list.some((x) => x.key === "aas.protocol" && x.level === "ok")).toBe(true)
+    expect(out.list.some((x) => x.key === "aas.protocol.version" && x.level === "ok")).toBe(true)
   })
 
   test("passes when AAS handshake protocol is reported", async () => {
@@ -77,7 +77,7 @@ describe("aas.doctor", () => {
     })
 
     expect(out.ok).toBe(true)
-    expect(out.list.some((x) => x.key === "aas.protocol" && x.level === "ok")).toBe(true)
+    expect(out.list.some((x) => x.key === "aas.protocol.handshake" && x.level === "ok")).toBe(true)
     expect(out.list.some((x) => x.key === "aas.api_auth" && x.level === "warn")).toBe(true)
   })
 
@@ -170,6 +170,32 @@ describe("aas.doctor", () => {
     })
 
     expect(out.ok).toBe(false)
-    expect(out.list.some((x) => x.key === "aas.protocol" && x.level === "fail")).toBe(true)
+    expect(out.list.some((x) => x.key === "aas.protocol.version" && x.level === "fail")).toBe(true)
+  })
+
+  test("fails unsupported handshake protocol identifier", async () => {
+    const cfg = Config.Info.parse({
+      aas: {
+        enabled: true,
+        mode: "hybrid",
+        bridge: {
+          url: "https://bridge.example/opencode/bridge/invoke",
+        },
+      },
+    })
+
+    const out = await AASDoctor.run(cfg, {
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            protocol: "other.bridge.v9",
+          }),
+          { status: 200 },
+        ),
+    })
+
+    expect(out.ok).toBe(false)
+    expect(out.list.some((x) => x.key === "aas.protocol.handshake" && x.level === "fail")).toBe(true)
   })
 })

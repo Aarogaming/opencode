@@ -1,4 +1,4 @@
-import { Envelope, compatible, parseResult } from "./interop"
+import { compatible, parseInvoke, parseResult } from "./interop"
 import { createHmac } from "node:crypto"
 
 function rid() {
@@ -36,7 +36,7 @@ function join(base: string, rel?: string) {
   return new URL(rel, base).toString()
 }
 
-function hdr(input: { auth?: auth; json: string; hint?: hello; stamp?: string }) {
+function hdr(input: { auth?: auth; json: string; hint?: hello; stamp?: string; sign?: boolean }) {
   const out: Record<string, string> = {
     "content-type": "application/json",
   }
@@ -51,7 +51,7 @@ function hdr(input: { auth?: auth; json: string; hint?: hello; stamp?: string })
     out.authorization = token.startsWith("Bearer ") ? token : `Bearer ${token}`
   if (api) out[apiHdr] = api
 
-  if (key) {
+  if (key && input.sign !== false) {
     const stamp = input.stamp ?? Date.now().toString()
     const sig = createHmac("sha256", key).update(`${stamp}.${input.json}`).digest("hex")
     out["x-aas-timestamp"] = stamp
@@ -74,7 +74,7 @@ async function hello(input: { bridge: string; auth?: auth; timeout: number }) {
   try {
     const first = await fetch(hand, {
       method: "GET",
-      headers: hdr({ auth: input.auth, json: probe }),
+      headers: hdr({ auth: input.auth, json: probe, sign: false }),
       signal: ctrl.signal,
     }).catch(() => undefined)
 
@@ -122,16 +122,6 @@ export async function call(input: {
   const operation_id = rid()
   const started = Date.now()
 
-  const body = Envelope.parse({
-    protocol_version: "1.0",
-    operation_id,
-    request_id,
-    capability: input.capability,
-    mode: input.mode,
-    payload: input.payload,
-    created_at_utc: new Date().toISOString(),
-  })
-
   const ctrl = new AbortController()
   const timeout = input.timeout ?? 20_000
   const wait = setTimeout(() => ctrl.abort(), timeout)
@@ -139,15 +129,15 @@ export async function call(input: {
     () => null,
   )
   const bridge = join(input.bridge, meta?.endpoints?.invoke)
-  const rpc = {
+  const rpc = parseInvoke({
     command: "capability.invoke",
     request_id,
+    operation_id,
     capability: input.capability,
     args: input.payload,
     mode: input.mode,
-    protocol_version: body.protocol_version,
-    operation_id,
-  }
+    protocol_version: "1.0",
+  })
   const json = JSON.stringify(rpc)
   const head = hdr({ auth: input.auth, json, hint: meta ?? undefined })
 
